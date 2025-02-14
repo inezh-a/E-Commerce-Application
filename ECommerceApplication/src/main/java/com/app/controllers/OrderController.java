@@ -28,9 +28,13 @@ public class OrderController {
 	@Autowired
 	public OrderService orderService;
 	
-	@PostMapping("/public/users/{email}/carts/{cartId}/payments/{paymentMethod}/order")
-	public ResponseEntity<OrderDTO> orderProducts(@PathVariable String email, @PathVariable Long cartId, @PathVariable String paymentMethod) {
-		OrderDTO order = orderService.placeOrder(email, cartId, paymentMethod);
+	@PostMapping("/public/users/{email}/carts/{cartId}/payments/{paymentMethod}/banks/{bankId}/order")
+	public ResponseEntity<OrderDTO> orderProducts(
+		@PathVariable String email, 
+		@PathVariable Long cartId, 
+		@PathVariable String paymentMethod,
+		@PathVariable(required = false) Long bankId) {
+		OrderDTO order = orderService.placeOrder(email, cartId, paymentMethod, bankId);
 		
 		return new ResponseEntity<OrderDTO>(order, HttpStatus.CREATED);
 	}

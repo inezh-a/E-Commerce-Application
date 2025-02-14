@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import com.app.entites.Bank;
 import com.app.entites.Cart;
 import com.app.entites.CartItem;
 import com.app.entites.Order;
@@ -24,6 +25,8 @@ import com.app.exceptions.ResourceNotFoundException;
 import com.app.payloads.OrderDTO;
 import com.app.payloads.OrderItemDTO;
 import com.app.payloads.OrderResponse;
+import com.app.payloads.PaymentDTO;
+import com.app.repositories.BankRepo;
 import com.app.repositories.CartItemRepo;
 import com.app.repositories.CartRepo;
 import com.app.repositories.OrderItemRepo;
@@ -50,6 +53,9 @@ public class OrderServiceImpl implements OrderService {
 	private PaymentRepo paymentRepo;
 
 	@Autowired
+	private BankRepo bankRepo;
+
+	@Autowired
 	public OrderItemRepo orderItemRepo;
 
 	@Autowired
@@ -65,7 +71,7 @@ public class OrderServiceImpl implements OrderService {
 	public ModelMapper modelMapper;
 
 	@Override
-	public OrderDTO placeOrder(String email, Long cartId, String paymentMethod) {
+    public OrderDTO placeOrder(String email, Long cartId, String paymentMethod, Long bankId) {
 
 		Cart cart = cartRepo.findCartByEmailAndCartId(email, cartId);
 
@@ -84,6 +90,12 @@ public class OrderServiceImpl implements OrderService {
 		Payment payment = new Payment();
 		payment.setOrder(order);
 		payment.setPaymentMethod(paymentMethod);
+
+        if ("BANK_TRANSFER".equalsIgnoreCase(paymentMethod) && bankId != null) {
+            Bank bank = bankRepo.findById(bankId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bank", "bankId", bankId));
+            payment.setBank(bank);
+        }
 
 		payment = paymentRepo.save(payment);
 
@@ -124,7 +136,18 @@ public class OrderServiceImpl implements OrderService {
 		});
 
 		OrderDTO orderDTO = modelMapper.map(savedOrder, OrderDTO.class);
-		
+	
+		PaymentDTO paymentDTO = new PaymentDTO();
+		paymentDTO.setPaymentId(payment.getPaymentId());
+		paymentDTO.setPaymentMethod(payment.getPaymentMethod());
+
+		if (payment.getBank() != null) {
+			paymentDTO.setBankName(payment.getBank().getNamaBank());
+			paymentDTO.setNomorRekening(payment.getBank().getNomorRekening());
+		}
+
+		orderDTO.setPayment(paymentDTO);
+
 		orderItems.forEach(item -> orderDTO.getOrderItems().add(modelMapper.map(item, OrderItemDTO.class)));
 
 		return orderDTO;
