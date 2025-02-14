@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import com.app.entites.Cart;
 import com.app.entites.CartItem;
+import com.app.entites.Coupon;
 import com.app.entites.Order;
 import com.app.entites.OrderItem;
 import com.app.entites.Payment;
@@ -26,6 +27,7 @@ import com.app.payloads.OrderItemDTO;
 import com.app.payloads.OrderResponse;
 import com.app.repositories.CartItemRepo;
 import com.app.repositories.CartRepo;
+import com.app.repositories.CouponRepo;
 import com.app.repositories.OrderItemRepo;
 import com.app.repositories.OrderRepo;
 import com.app.repositories.PaymentRepo;
@@ -42,6 +44,9 @@ public class OrderServiceImpl implements OrderService {
 
 	@Autowired
 	public CartRepo cartRepo;
+
+	@Autowired
+	public CouponRepo couponRepo;
 
 	@Autowired
 	public OrderRepo orderRepo;
@@ -65,7 +70,7 @@ public class OrderServiceImpl implements OrderService {
 	public ModelMapper modelMapper;
 
 	@Override
-	public OrderDTO placeOrder(String email, Long cartId, String paymentMethod) {
+	public OrderDTO placeOrder(String email, Long cartId, String paymentMethod, String couponCode) {
 
 		Cart cart = cartRepo.findCartByEmailAndCartId(email, cartId);
 
@@ -73,12 +78,26 @@ public class OrderServiceImpl implements OrderService {
 			throw new ResourceNotFoundException("Cart", "cartId", cartId);
 		}
 
+		double totalAmount = cart.getTotalPrice();
+		// Apply coupon if provided
+		if (couponCode != null && !couponCode.isEmpty()) {
+			Coupon coupon = couponRepo.findByCode(couponCode);
+			if (coupon == null || !coupon.getActive()) {
+				throw new APIException("Invalid or inactive coupon code: " + couponCode);
+			}
+			double hargaCoupon = totalAmount * coupon.getDiscountAmount()/100;
+			totalAmount -= hargaCoupon;
+			if (totalAmount < 0) {
+				totalAmount = 0;  // Ensure total amount is not negative
+			}
+		}
+
 		Order order = new Order();
 
 		order.setEmail(email);
 		order.setOrderDate(LocalDate.now());
 
-		order.setTotalAmount(cart.getTotalPrice());
+		order.setTotalAmount(totalAmount);
 		order.setOrderStatus("Order Accepted !");
 
 		Payment payment = new Payment();
