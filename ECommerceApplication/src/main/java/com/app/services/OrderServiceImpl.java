@@ -79,16 +79,20 @@ public class OrderServiceImpl implements OrderService {
 		}
 
 		double totalAmount = cart.getTotalPrice();
-		// Apply coupon if provided
+
 		if (couponCode != null && !couponCode.isEmpty()) {
 			Coupon coupon = couponRepo.findByCode(couponCode);
+
 			if (coupon == null || !coupon.getActive()) {
 				throw new APIException("Invalid or inactive coupon code: " + couponCode);
 			}
-			double hargaCoupon = totalAmount * coupon.getDiscountAmount()/100;
-			totalAmount -= hargaCoupon;
+
+			double couponPrice = totalAmount * coupon.getDiscountAmount() / 100;
+
+			totalAmount -= couponPrice;
+
 			if (totalAmount < 0) {
-				totalAmount = 0;  // Ensure total amount is not negative
+				totalAmount = 0;
 			}
 		}
 

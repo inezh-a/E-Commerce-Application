@@ -10,8 +10,11 @@ import lombok.NoArgsConstructor;
 public class CouponDTO {
 
     private Long couponId;
+
     private String code;
+
     private Double discountAmount;
+    
     private Boolean active;
     
 }
